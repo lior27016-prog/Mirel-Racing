@@ -1,108 +1,1302 @@
 <!DOCTYPE html>
 <html lang="he">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mirel Racing - משחק מכוניות</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🏎️ Mirel Racing</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:#1a1a2e; overflow:hidden; width:100vw; height:100vh; font-family:'Arial',sans-serif; touch-action:none; }
+
+  canvas { display:block; }
+
+  /* ── SCREENS ── */
+  .screen {
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);
+    z-index:50; transition:opacity .35s;
+  }
+  .screen.hidden { opacity:0; pointer-events:none; }
+
+  /* MAIN MENU */
+  #menuScreen .logo {
+    font-size:clamp(40px,10vw,80px); font-weight:900; letter-spacing:-2px;
+    background:linear-gradient(135deg,#f7971e,#ffd200);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    text-shadow:none; filter:drop-shadow(0 4px 8px rgba(255,200,0,.4));
+    margin-bottom:6px;
+  }
+  #menuScreen .tagline {
+    color:#aaa; font-size:clamp(13px,3vw,18px); margin-bottom:36px; letter-spacing:2px;
+  }
+  .car-select-row {
+    display:flex; gap:14px; margin-bottom:28px; flex-wrap:wrap; justify-content:center;
+  }
+  .car-card {
+    background:rgba(255,255,255,.07); border:2px solid transparent; border-radius:14px;
+    padding:16px 20px; cursor:pointer; transition:all .2s; text-align:center; min-width:90px;
+  }
+  .car-card:hover, .car-card.selected { border-color:#ffd200; background:rgba(255,210,0,.15); }
+  .car-card .car-emoji { font-size:36px; display:block; }
+  .car-card .car-name { color:#ddd; font-size:12px; margin-top:6px; }
+  .car-card .car-spd { color:#ffd200; font-size:11px; }
+
+  .menu-btns { display:flex; flex-direction:column; gap:12px; width:min(320px,90vw); }
+  .btn {
+    padding:16px 24px; border:none; border-radius:12px; font-size:16px; font-weight:700;
+    cursor:pointer; transition:all .2s; letter-spacing:1px; text-transform:uppercase;
+  }
+  .btn-go {
+    background:linear-gradient(135deg,#f7971e,#ffd200); color:#1a1a2e;
+    box-shadow:0 6px 24px rgba(255,200,0,.35);
+  }
+  .btn-go:active { transform:scale(.97); }
+  .btn-outline {
+    background:transparent; color:#ddd; border:2px solid rgba(255,255,255,.25);
+  }
+  .btn-outline:active { background:rgba(255,255,255,.08); }
+
+  /* SETTINGS */
+  #settingsScreen .panel {
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    border-radius:20px; padding:32px; width:min(380px,94vw);
+  }
+  #settingsScreen h2 { color:#ffd200; margin-bottom:24px; font-size:24px; text-align:center; }
+  .setting-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; color:#ddd; font-size:15px; }
+  .setting-row select, .setting-row input[type=range] {
+    background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2);
+    border-radius:8px; padding:6px 10px; font-size:14px; width:140px;
+  }
+  .toggle {
+    position:relative; display:inline-block; width:52px; height:28px;
+  }
+  .toggle input { opacity:0; width:0; height:0; }
+  .slider-tog {
+    position:absolute; inset:0; background:#444; border-radius:28px; cursor:pointer; transition:.3s;
+  }
+  .slider-tog:before {
+    content:''; position:absolute; width:22px; height:22px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.3s;
+  }
+  input:checked + .slider-tog { background:#ffd200; }
+  input:checked + .slider-tog:before { transform:translateX(24px); }
+
+  /* LEADERBOARD */
+  #lbScreen .panel {
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    border-radius:20px; padding:28px; width:min(380px,94vw); max-height:88vh; overflow-y:auto;
+  }
+  #lbScreen h2 { color:#ffd200; margin-bottom:20px; font-size:24px; text-align:center; }
+  .lb-row {
+    display:flex; align-items:center; gap:12px; padding:10px 12px; margin-bottom:6px;
+    background:rgba(255,255,255,.05); border-radius:10px; color:#ddd;
+  }
+  .lb-rank { width:28px; text-align:center; font-weight:700; color:#ffd200; }
+  .lb-name { flex:1; }
+  .lb-time { color:#4ecdc4; font-weight:700; }
+  .lb-pos { color:#ff6b6b; font-size:13px; }
+
+  /* PAUSE / GAMEOVER */
+  #pauseScreen .panel, #gameoverScreen .panel {
+    background:rgba(10,10,20,.92); border:1px solid rgba(255,255,255,.15);
+    border-radius:20px; padding:36px; width:min(340px,92vw); text-align:center;
+  }
+  #pauseScreen h2, #gameoverScreen h2 { color:#ffd200; font-size:30px; margin-bottom:12px; }
+  #gameoverScreen .result-icon { font-size:60px; margin-bottom:12px; display:block; }
+  #gameoverScreen .stats-box { background:rgba(255,255,255,.06); border-radius:12px; padding:16px; margin:16px 0; text-align:right; direction:rtl; }
+  #gameoverScreen .stats-box p { color:#ddd; margin:6px 0; font-size:15px; }
+  #gameoverScreen .stats-box span { color:#ffd200; font-weight:700; }
+  #playerNameInput {
+    width:100%; padding:12px; border:none; border-radius:8px; margin:10px 0;
+    background:rgba(255,255,255,.12); color:#fff; font-size:15px; text-align:center; outline:none;
+    border:1px solid rgba(255,255,255,.2);
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position:fixed; top:0; left:0; width:100%; z-index:30;
+    display:none; pointer-events:none;
+  }
+  #hud.active { display:block; }
+  #hud .top-bar {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 16px;
+    background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);
+  }
+  .hud-chip {
+    background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.15);
+    border-radius:10px; padding:7px 14px; color:#fff; font-size:clamp(12px,3vw,15px);
+    font-weight:700;
+  }
+  .hud-chip .label { color:#aaa; font-size:.75em; font-weight:400; display:block; }
+  .hud-chip .val { color:#ffd200; }
+
+  #lapBar {
+    position:fixed; top:60px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.6); border-radius:8px; padding:5px 18px;
+    color:#fff; font-size:14px; font-weight:700; pointer-events:none; z-index:30;
+    display:none;
+  }
+  #lapBar.active { display:block; }
+
+  #pauseBtn {
+    position:fixed; top:10px; right:16px; z-index:31;
+    background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.2);
+    color:#fff; border-radius:10px; padding:8px 14px; font-size:20px; cursor:pointer;
+    display:none; pointer-events:all;
+  }
+  #pauseBtn.active { display:block; }
+
+  /* MINIMAP */
+  #minimapWrap {
+    position:fixed; bottom:140px; left:14px; z-index:30;
+    width:100px; height:100px; border:2px solid rgba(255,255,255,.3);
+    border-radius:10px; overflow:hidden; display:none;
+  }
+  #minimapWrap.active { display:block; }
+  #minimap { width:100%; height:100%; }
+
+  /* SPEED GAUGE */
+  #speedArc {
+    position:fixed; bottom:140px; right:14px; z-index:30;
+    display:none;
+  }
+  #speedArc.active { display:block; }
+
+  /* ── MOBILE CONTROLS ── */
+  #controls {
+    position:fixed; bottom:0; left:0; width:100%; z-index:40;
+    display:none; pointer-events:none;
+    padding-bottom:env(safe-area-inset-bottom, 10px);
+  }
+  #controls.active { display:flex; justify-content:space-between; align-items:flex-end; padding:0 12px 14px; }
+
+  .ctrl-btn {
+    pointer-events:all; user-select:none; -webkit-user-select:none;
+    background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.3);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:28px; transition:background .1s; cursor:pointer;
+    -webkit-touch-callout:none;
+  }
+  .ctrl-btn:active, .ctrl-btn.pressed { background:rgba(255,210,0,.3); border-color:#ffd200; }
+
+  #btnLeft, #btnRight { width:72px; height:72px; }
+  #btnLeft { margin-right:6px; }
+  .steer-group { display:flex; gap:10px; align-items:center; }
+
+  #btnGas { width:88px; height:88px; font-size:34px; }
+  #btnBrake { width:66px; height:66px; font-size:26px; }
+  .gas-group { display:flex; gap:8px; align-items:center; flex-direction:row-reverse; }
+
+  /* countdown */
+  #countdown {
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    z-index:45; pointer-events:none; display:none;
+  }
+  #countdown.active { display:flex; }
+  #countdownNum {
+    font-size:120px; font-weight:900; color:#ffd200;
+    text-shadow:0 0 40px rgba(255,210,0,.8);
+    animation:popIn .4s ease-out;
+  }
+  @keyframes popIn {
+    0%{transform:scale(2);opacity:0}
+    100%{transform:scale(1);opacity:1}
+  }
+
+  /* LAP FLASH */
+  #lapFlash {
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    z-index:44; pointer-events:none; display:none;
+  }
+  #lapFlash.active { display:flex; }
+  #lapFlashText {
+    font-size:56px; font-weight:900; color:#4ecdc4;
+    text-shadow:0 0 30px rgba(78,205,196,.7);
+    animation:fadeUpOut 1.5s ease-out forwards;
+  }
+  @keyframes fadeUpOut {
+    0%{transform:translateY(0);opacity:1}
+    100%{transform:translateY(-80px);opacity:0}
+  }
+</style>
 </head>
 <body>
-    <div id="mainMenu" class="menu-container active">
-        <div class="menu-content">
-            <h1>🏎️ Mirel Racing</h1>
-            <p class="subtitle">משחק מכוניות ברמה גבוהה</p>
-            <button onclick="startGame()" class="btn btn-primary">התחל משחק</button>
-            <button onclick="showSettings()" class="btn btn-secondary">הגדרות</button>
-            <button onclick="showLeaderboard()" class="btn btn-secondary">טבלת דירוג</button>
-        </div>
-    </div>
 
-    <div id="settingsMenu" class="menu-container">
-        <div class="menu-content">
-            <h2>הגדרות</h2>
-            <div class="settings-group">
-                <label>רמת קושי:</label>
-                <select id="difficultySelect" onchange="updateDifficulty()">
-                    <option value="easy">קל</option>
-                    <option value="medium" selected>בינוני</option>
-                    <option value="hard">קשה</option>
-                </select>
-            </div>
-            <div class="settings-group">
-                <label>מספר יריבים:</label>
-                <select id="opponentCount">
-                    <option value="1">1</option>
-                    <option value="2" selected>2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                </select>
-            </div>
-            <div class="settings-group">
-                <label>
-                    <input type="checkbox" id="soundToggle" checked>
-                    הפעל צלילים
-                </label>
-            </div>
-            <button onclick="backToMenu()" class="btn btn-primary">חזור</button>
-        </div>
-    </div>
+<!-- ═══════════════════════════════════ MAIN MENU ═══════════ -->
+<div id="menuScreen" class="screen">
+  <div class="logo">🏎️ Mirel Racing</div>
+  <div class="tagline">בחר מכונית • צא לדרך • נצח!</div>
 
-    <div id="leaderboardMenu" class="menu-container">
-        <div class="menu-content">
-            <h2>טבלת דירוג</h2>
-            <div id="leaderboardList" class="leaderboard-list"></div>
-            <button onclick="clearLeaderboard()" class="btn btn-secondary">נקה טבלה</button>
-            <button onclick="backToMenu()" class="btn btn-primary">חזור</button>
-        </div>
-    </div>
+  <div class="car-select-row" id="carSelectRow"></div>
 
-    <div id="gameContainer" class="game-container">
-        <canvas id="gameCanvas"></canvas>
-        <div id="hud" class="hud">
-            <div class="hud-top">
-                <div class="hud-item">
-                    <span>מהירות:</span>
-                    <span id="speedDisplay">0</span> km/h
-                </div>
-                <div class="hud-item">
-                    <span>עמדה:</span>
-                    <span id="positionDisplay">1</span>
-                </div>
-                <div class="hud-item">
-                    <span>זמן:</span>
-                    <span id="timeDisplay">0:00</span>
-                </div>
-            </div>
-            <div class="hud-bottom">
-                <div class="minimap-container">
-                    <canvas id="minimap"></canvas>
-                </div>
-            </div>
-            <button id="pauseBtn" onclick="togglePause()" class="pause-btn">⏸ השהה</button>
-        </div>
-    </div>
+  <div class="menu-btns">
+    <button class="btn btn-go" onclick="App.startRace()">▶ התחל מירוץ</button>
+    <button class="btn btn-outline" onclick="App.showScreen('settingsScreen')">⚙ הגדרות</button>
+    <button class="btn btn-outline" onclick="App.showLeaderboard()">🏆 טבלת דירוג</button>
+  </div>
+</div>
 
-    <div id="pauseMenu" class="menu-container">
-        <div class="menu-content">
-            <h2>משחק מושהה</h2>
-            <button onclick="togglePause()" class="btn btn-primary">המשך</button>
-            <button onclick="backToMenu()" class="btn btn-secondary">חזור לתפריט</button>
-        </div>
+<!-- ═══════════════════════════════════ SETTINGS ═══════════ -->
+<div id="settingsScreen" class="screen hidden">
+  <div class="panel">
+    <h2>⚙ הגדרות</h2>
+    <div class="setting-row">
+      <span>רמת קושי</span>
+      <select id="cfgDiff">
+        <option value="easy">קל</option>
+        <option value="medium" selected>בינוני</option>
+        <option value="hard">קשה</option>
+      </select>
     </div>
-
-    <div id="gameOverMenu" class="menu-container">
-        <div class="menu-content">
-            <h2 id="gameOverTitle">סיום המשחק</h2>
-            <div id="gameStats" class="game-stats"></div>
-            <input type="text" id="playerName" placeholder="הכנס את שמך" maxlength="20">
-            <button onclick="saveScore()" class="btn btn-primary">שמור ניקוד</button>
-            <button onclick="backToMenu()" class="btn btn-secondary">חזור לתפריט</button>
-        </div>
+    <div class="setting-row">
+      <span>מספר יריבים</span>
+      <select id="cfgOpponents">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
     </div>
+    <div class="setting-row">
+      <span>מספר סיבובים</span>
+      <select id="cfgLaps">
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <span>סאונד</span>
+      <label class="toggle"><input type="checkbox" id="cfgSound" checked><span class="slider-tog"></span></label>
+    </div>
+    <button class="btn btn-go" style="margin-top:20px" onclick="App.showScreen('menuScreen')">שמור וחזור</button>
+  </div>
+</div>
 
-    <script src="physics.js"></script>
-    <script src="ai.js"></script>
-    <script src="game.js"></script>
-    <script src="input.js"></script>
+<!-- ═══════════════════════════════════ LEADERBOARD ═══════════ -->
+<div id="lbScreen" class="screen hidden">
+  <div class="panel">
+    <h2>🏆 טבלת דירוג</h2>
+    <div id="lbList"></div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-outline" style="flex:1" onclick="App.clearLB()">נקה</button>
+      <button class="btn btn-go" style="flex:1" onclick="App.showScreen('menuScreen')">חזור</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PAUSE ═══════════ -->
+<div id="pauseScreen" class="screen hidden">
+  <div class="panel">
+    <h2>⏸ השהיה</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
+      <button class="btn btn-go" onclick="App.resumeGame()">▶ המשך</button>
+      <button class="btn btn-outline" onclick="App.quitToMenu()">🏠 תפריט ראשי</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ GAME OVER ═══════════ -->
+<div id="gameoverScreen" class="screen hidden">
+  <div class="panel">
+    <span id="goIcon" class="result-icon"></span>
+    <h2 id="goTitle"></h2>
+    <div class="stats-box" id="goStats"></div>
+    <input id="playerNameInput" placeholder="שם שלך" maxlength="18">
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+      <button class="btn btn-go" onclick="App.saveScore()">💾 שמור ניקוד</button>
+      <button class="btn btn-outline" onclick="App.quitToMenu()">🏠 תפריט ראשי</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ GAME CANVAS ═══════════ -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="top-bar">
+    <div class="hud-chip"><span class="label">מהירות</span><span class="val" id="hudSpeed">0</span> <span style="color:#777;font-size:.7em">קמ"ש</span></div>
+    <div class="hud-chip"><span class="label">עמדה</span><span class="val" id="hudPos">1</span></div>
+    <div class="hud-chip"><span class="label">זמן</span><span class="val" id="hudTime">0:00</span></div>
+  </div>
+</div>
+<div id="lapBar">סיבוב <span id="hudLap">1</span> / <span id="hudMaxLap">3</span></div>
+<button id="pauseBtn" onclick="App.pauseGame()">⏸</button>
+
+<div id="minimapWrap"><canvas id="minimapC" width="100" height="100"></canvas></div>
+
+<div id="speedArc"><canvas id="speedArcC" width="110" height="70"></canvas></div>
+
+<!-- Mobile controls -->
+<div id="controls">
+  <div class="steer-group">
+    <div class="ctrl-btn" id="btnLeft">◀</div>
+    <div class="ctrl-btn" id="btnRight">▶</div>
+  </div>
+  <div class="gas-group">
+    <div class="ctrl-btn" id="btnGas">🔥</div>
+    <div class="ctrl-btn" id="btnBrake">🛑</div>
+  </div>
+</div>
+
+<!-- Countdown -->
+<div id="countdown"><div id="countdownNum"></div></div>
+<!-- Lap flash -->
+<div id="lapFlash"><div id="lapFlashText"></div></div>
+
+<script>
+"use strict";
+
+// ════════════════════════════════════════════════════════════
+//  VECTOR
+// ════════════════════════════════════════════════════════════
+class Vec2 {
+  constructor(x=0,y=0){this.x=x;this.y=y;}
+  add(v){return new Vec2(this.x+v.x,this.y+v.y);}
+  sub(v){return new Vec2(this.x-v.x,this.y-v.y);}
+  scale(s){return new Vec2(this.x*s,this.y*s);}
+  dot(v){return this.x*v.x+this.y*v.y;}
+  len(){return Math.hypot(this.x,this.y);}
+  norm(){const l=this.len();return l?new Vec2(this.x/l,this.y/l):new Vec2();}
+  dist(v){return this.sub(v).len();}
+  angle(){return Math.atan2(this.y,this.x);}
+  rot(a){const c=Math.cos(a),s=Math.sin(a);return new Vec2(this.x*c-this.y*s,this.x*s+this.y*c);}
+}
+
+// ════════════════════════════════════════════════════════════
+//  TRACK  – oval with inner cut-out
+// ════════════════════════════════════════════════════════════
+class Track {
+  constructor(){
+    this.W = 110;           // road width
+    this.pts = [];          // centre-line waypoints
+    this.checkpoints = [];
+    this._build();
+  }
+
+  _build(){
+    // A nice oval with two straights and two curves
+    const cx=600, cy=450;
+    const rx=420, ry=280;
+    const N=180;
+    for(let i=0;i<N;i++){
+      const t = (i/N)*Math.PI*2;
+      // Squircle-ish oval
+      const x = cx + rx * Math.cos(t) * (1 - 0.08*Math.pow(Math.sin(2*t),2));
+      const y = cy + ry * Math.sin(t) * (1 - 0.04*Math.pow(Math.cos(2*t),2));
+      this.pts.push(new Vec2(x,y));
+    }
+    // Checkpoints every ~20 pts
+    for(let i=0;i<this.pts.length;i+=15){
+      this.checkpoints.push({idx:i, pos:this.pts[i], r:this.W*0.75});
+    }
+  }
+
+  // Closest waypoint index
+  closest(pos){
+    let best=0, bd=Infinity;
+    for(let i=0;i<this.pts.length;i++){
+      const d=pos.dist(this.pts[i]);
+      if(d<bd){bd=d;best=i;}
+    }
+    return best;
+  }
+
+  // Is position off-track?
+  offTrack(pos){
+    const ci = this.closest(pos);
+    return pos.dist(this.pts[ci]) > this.W/2 + 14;
+  }
+
+  // Returns normal (outward) and signed offset at closest point
+  trackNormal(pos){
+    const ci = this.closest(pos);
+    const ni = (ci+1)%this.pts.length;
+    const tang = this.pts[ni].sub(this.pts[ci]).norm();
+    return new Vec2(-tang.y, tang.x);
+  }
+
+  render(ctx){
+    // Grass background already drawn on canvas
+    // Asphalt road (wide stroke)
+    ctx.save();
+    ctx.lineJoin='round'; ctx.lineCap='round';
+
+    // Road shadow
+    ctx.strokeStyle='rgba(0,0,0,.4)';
+    ctx.lineWidth = this.W+10;
+    this._strokePath(ctx);
+
+    // Asphalt
+    ctx.strokeStyle='#2d2d2d';
+    ctx.lineWidth = this.W;
+    this._strokePath(ctx);
+
+    // Road edge lines
+    ctx.strokeStyle='rgba(255,255,255,.55)';
+    ctx.lineWidth=3;
+    ctx.setLineDash([]);
+    this._strokeOffsetPath(ctx, -(this.W/2-6));
+    this._strokeOffsetPath(ctx,   this.W/2-6);
+
+    // Centre dashed line
+    ctx.strokeStyle='rgba(255,220,0,.6)';
+    ctx.lineWidth=2.5;
+    ctx.setLineDash([22,18]);
+    this._strokePath(ctx);
+    ctx.setLineDash([]);
+
+    // Start/finish line
+    const s=this.pts[0], s2=this.pts[1];
+    const tang=s2.sub(s).norm();
+    const perp=new Vec2(-tang.y,tang.x);
+    const hw=this.W/2;
+    const TILES=8;
+    const tSize=hw*2/TILES;
+    ctx.save();
+    for(let r=0;r<2;r++){
+      for(let c=0;c<TILES;c++){
+        ctx.fillStyle=(r+c)%2===0?'#fff':'#222';
+        const base=s.add(perp.scale(-hw+c*tSize));
+        const fwd=tang.scale(r*8);
+        ctx.beginPath();
+        ctx.rect(base.x+fwd.x-1, base.y+fwd.y-1, tSize+1, 8);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  _strokePath(ctx){
+    ctx.beginPath();
+    ctx.moveTo(this.pts[0].x,this.pts[0].y);
+    for(let i=1;i<this.pts.length;i++) ctx.lineTo(this.pts[i].x,this.pts[i].y);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  _strokeOffsetPath(ctx, offset){
+    // approximate by offsetting normals
+    const N=this.pts.length;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const prev=this.pts[(i-1+N)%N], next=this.pts[(i+1)%N];
+      const tang=next.sub(prev).norm();
+      const perp=new Vec2(-tang.y,tang.x);
+      const p=this.pts[i].add(perp.scale(offset));
+      i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // world bounds for camera
+  bounds(){
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const p of this.pts){
+      if(p.x<minX)minX=p.x; if(p.y<minY)minY=p.y;
+      if(p.x>maxX)maxX=p.x; if(p.y>maxY)maxY=p.y;
+    }
+    return {minX,minY,maxX,maxY,
+      cx:(minX+maxX)/2, cy:(minY+maxY)/2,
+      w:maxX-minX, h:maxY-minY};
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  CAR
+// ════════════════════════════════════════════════════════════
+const CAR_DEFS = [
+  {name:'ספורט',  emoji:'🔴', color:'#ff4444', accent:'#ffcc00', maxSpd:16, accel:.38, brake:.3,  turn:.16},
+  {name:'מהיר',   emoji:'🔵', color:'#4488ff', accent:'#ffffff', maxSpd:17, accel:.42, brake:.28, turn:.14},
+  {name:'גרייד',  emoji:'🟢', color:'#44cc44', accent:'#ffff00', maxSpd:15, accel:.35, brake:.35, turn:.18},
+  {name:'כסף',   emoji:'⚪', color:'#cccccc', accent:'#ff8800', maxSpd:16, accel:.39, brake:.31, turn:.16},
+];
+
+class Car {
+  constructor(def, x, y, angle=0, isPlayer=false){
+    this.def = def;
+    this.pos = new Vec2(x,y);
+    this.vel = new Vec2();
+    this.angle = angle;
+    this.angVel = 0;
+    this.isPlayer = isPlayer;
+
+    this.w=28; this.h=48;
+    this.throttle=0; this.brakeF=0; this.steer=0;
+
+    this.lap=1; this.cpHit=[]; this.totalDist=0;
+    this.finishTime=null; this.finished=false;
+
+    this.offTrackTimer=0;
+    this.skidParticles=[];
+  }
+
+  update(track){
+    const fwd = new Vec2(Math.sin(this.angle), -Math.cos(this.angle));
+    let spd = this.vel.dot(fwd);
+
+    // Engine / braking
+    if(this.throttle>0) spd += this.def.accel * this.throttle;
+    if(this.brakeF>0){
+      if(spd>0) spd -= this.def.brake * this.brakeF;
+      else spd -= this.def.accel * .5 * this.brakeF; // reverse
+    }
+
+    // Clamp speed
+    const maxR = this.def.maxSpd*(this.offTrackTimer>0?.55:1);
+    spd = Math.max(-maxR*.45, Math.min(maxR, spd));
+
+    // Friction
+    spd *= .978;
+
+    // Steering (proportional to speed)
+    const turnF = this.def.turn * Math.min(1, Math.abs(spd)/8);
+    this.angVel = this.steer * turnF * Math.sign(spd||1);
+    this.angle += this.angVel;
+
+    this.vel = fwd.scale(spd);
+    this.pos = this.pos.add(this.vel);
+    this.totalDist += Math.abs(spd);
+
+    // Off-track slow
+    if(track.offTrack(this.pos)){
+      this.offTrackTimer = 20;
+    } else {
+      if(this.offTrackTimer>0) this.offTrackTimer--;
+    }
+
+    // Skid
+    if(Math.abs(this.steer)>.5 && Math.abs(spd)>4){
+      this.skidParticles.push({x:this.pos.x,y:this.pos.y,life:40});
+    }
+    this.skidParticles = this.skidParticles.filter(p=>{p.life--;return p.life>0;});
+  }
+
+  // Check + register checkpoint hit. Returns true if lap completed.
+  checkCheckpoints(track, elapsedTime){
+    for(const cp of track.checkpoints){
+      if(!this.cpHit.includes(cp.idx) && this.pos.dist(cp.pos)<cp.r){
+        this.cpHit.push(cp.idx);
+      }
+    }
+    // Lap complete: passed start/finish (near waypoint 0) AND hit enough CPs
+    const minCPs = Math.floor(track.checkpoints.length * .7);
+    if(this.cpHit.length >= minCPs){
+      const startDist = this.pos.dist(track.pts[0]);
+      if(startDist < track.W*.75){
+        this.cpHit=[];
+        this.lap++;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  render(ctx){
+    // Skids
+    for(const p of this.skidParticles){
+      ctx.fillStyle=`rgba(30,30,30,${p.life/40*.5})`;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,3,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(this.angle);
+
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.28)';
+    ctx.beginPath();
+    ctx.ellipse(3,4, this.w/2+4, this.h/2+3, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Body
+    const grad = ctx.createLinearGradient(-this.w/2,-this.h/2, this.w/2, this.h/2);
+    grad.addColorStop(0, lighten(this.def.color,.3));
+    grad.addColorStop(.6, this.def.color);
+    grad.addColorStop(1, darken(this.def.color,.3));
+    ctx.fillStyle = grad;
+    roundRect(ctx, -this.w/2, -this.h/2, this.w, this.h, 6);
+    ctx.fill();
+
+    // Windshields
+    ctx.fillStyle='rgba(160,210,255,.55)';
+    roundRect(ctx, -this.w/2+4, -this.h/2+9, this.w-8, 11, 3);
+    ctx.fill();
+    ctx.fillStyle='rgba(160,210,255,.38)';
+    roundRect(ctx, -this.w/2+4, this.h/2-20, this.w-8, 9, 3);
+    ctx.fill();
+
+    // Headlights
+    ctx.fillStyle='#fffde0';
+    ctx.fillRect(-this.w/2+3,-this.h/2-2, 7,4);
+    ctx.fillRect(this.w/2-10,-this.h/2-2, 7,4);
+
+    // Tail lights
+    ctx.fillStyle='#ff2200';
+    ctx.fillRect(-this.w/2+3, this.h/2-2, 7,4);
+    ctx.fillRect(this.w/2-10, this.h/2-2, 7,4);
+
+    // Accent stripe
+    ctx.fillStyle = this.def.accent;
+    ctx.fillRect(-3, -this.h/2+2, 6, this.h-4);
+    ctx.globalAlpha=.5;
+    ctx.fill();
+    ctx.globalAlpha=1;
+
+    // Player indicator
+    if(this.isPlayer){
+      ctx.fillStyle='rgba(255,220,0,.9)';
+      ctx.beginPath();
+      ctx.moveTo(0,-this.h/2-10);
+      ctx.lineTo(-6,-this.h/2-3);
+      ctx.lineTo(6,-this.h/2-3);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  AI
+// ════════════════════════════════════════════════════════════
+const AI_PARAMS = {
+  easy:   {speed:.78, steerK:.7,  lookahead:180, noise:.25},
+  medium: {speed:.90, steerK:.88, lookahead:220, noise:.12},
+  hard:   {speed:.99, steerK:.97, lookahead:260, noise:.04},
+};
+
+class AIDriver {
+  constructor(car, track, difficulty){
+    this.car = car;
+    this.track = track;
+    this.p = AI_PARAMS[difficulty]||AI_PARAMS.medium;
+    this.noiseAngle = 0;
+    this.timer=0;
+  }
+  update(allCars){
+    this.timer++;
+    const car=this.car, trk=this.track;
+    const ci = trk.closest(car.pos);
+    const la = Math.floor(this.p.lookahead/5);
+    const ti = (ci+la)%trk.pts.length;
+    const target = trk.pts[ti];
+
+    // Noise
+    if(this.timer%12===0) this.noiseAngle=(Math.random()-.5)*this.p.noise*2;
+
+    const toTarget = target.sub(car.pos).norm();
+    const fwd = new Vec2(Math.sin(car.angle),-Math.cos(car.angle));
+    const cross = fwd.x*toTarget.y - fwd.y*toTarget.x;
+
+    car.steer = Math.max(-1,Math.min(1, cross * this.p.steerK * 3 + this.noiseAngle));
+    car.throttle = this.p.speed;
+    car.brakeF = Math.abs(cross)>.6 ? .3 : 0;
+
+    // Collision avoidance with nearby cars
+    for(const other of allCars){
+      if(other===car) continue;
+      const dist = car.pos.dist(other.pos);
+      if(dist<70){
+        const away = car.pos.sub(other.pos).norm();
+        car.steer += away.x*.4;
+        if(dist<45) car.brakeF=.4;
+      }
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  PARTICLES / EFFECTS
+// ════════════════════════════════════════════════════════════
+class ParticleSystem {
+  constructor(){this.particles=[];}
+  spawn(x,y,color,count=8){
+    for(let i=0;i<count;i++){
+      const a=Math.random()*Math.PI*2;
+      const spd=1+Math.random()*4;
+      this.particles.push({
+        x,y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
+        life:30+Math.random()*20, maxLife:50, color, r:3+Math.random()*4
+      });
+    }
+  }
+  update(){this.particles=this.particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vx*=.93;p.vy*=.93;p.life--;return p.life>0;});}
+  render(ctx){
+    for(const p of this.particles){
+      ctx.globalAlpha=p.life/p.maxLife;
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  HELPER DRAWING
+// ════════════════════════════════════════════════════════════
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+function lighten(hex,f){return adjustColor(hex,f);}
+function darken(hex,f){return adjustColor(hex,-f);}
+function adjustColor(hex,f){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const clamp=v=>Math.max(0,Math.min(255,Math.round(v)));
+  if(f>0) return `rgb(${clamp(r+(255-r)*f)},${clamp(g+(255-g)*f)},${clamp(b+(255-b)*f)})`;
+  return `rgb(${clamp(r*(1+f))},${clamp(g*(1+f))},${clamp(b*(1+f))})`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  SOUND  (simple Web Audio tones)
+// ════════════════════════════════════════════════════════════
+let audioCtx=null;
+function getAudio(){
+  if(!audioCtx) try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  return audioCtx;
+}
+function playTone(freq,dur,type='triangle',vol=.12){
+  const ac=getAudio(); if(!ac||!document.getElementById('cfgSound').checked) return;
+  try{
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type=type; o.frequency.setValueAtTime(freq,ac.currentTime);
+    g.gain.setValueAtTime(vol,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);
+    o.start(); o.stop(ac.currentTime+dur);
+  }catch(e){}
+}
+function playLap(){playTone(880,.12,'square',.15);setTimeout(()=>playTone(1100,.2,'square',.15),130);}
+function playWin(){[440,550,660,880].forEach((f,i)=>setTimeout(()=>playTone(f,.3,'triangle',.15),i*120));}
+function playEngineLoop(spd){
+  const ac=getAudio(); if(!ac||!document.getElementById('cfgSound').checked) return;
+  // handled via periodic calls from game loop to avoid too many nodes
+}
+
+// ════════════════════════════════════════════════════════════
+//  RACE ENGINE
+// ════════════════════════════════════════════════════════════
+let raceState = null;
+
+function startRace(cfg){
+  const canvas=document.getElementById('gameCanvas');
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  const ctx=canvas.getContext('2d');
+
+  const track = new Track();
+  const particles = new ParticleSystem();
+  const maxLaps = cfg.laps;
+  const diff = cfg.diff;
+
+  // Spread start positions
+  const startPts = track.pts.slice(0,1+cfg.opponents);
+  const startAngle = track.pts[1].sub(track.pts[0]).angle() + Math.PI/2;
+
+  const allCars=[];
+  // Player car
+  const pDef = CAR_DEFS[cfg.carIdx];
+  const pCar = new Car(pDef,
+    track.pts[0].x + (track.pts[0].sub(track.pts[1]).norm().scale(0)).x,
+    track.pts[0].y - 20, startAngle, true);
+  allCars.push(pCar);
+
+  // AI cars
+  const aiDrivers=[];
+  const aiColors=[1,2,3,0].filter(i=>i!==cfg.carIdx);
+  for(let i=0;i<cfg.opponents;i++){
+    const offset=(i+1)*58;
+    const aDef = CAR_DEFS[aiColors[i%aiColors.length]];
+    const aCar = new Car(aDef, track.pts[0].x - offset*Math.cos(startAngle+Math.PI/2),
+      track.pts[0].y - offset*Math.sin(startAngle+Math.PI/2) - 20, startAngle);
+    allCars.push(aCar);
+    aiDrivers.push(new AIDriver(aCar, track, diff));
+  }
+
+  const state = {
+    canvas, ctx, track, particles,
+    pCar, allCars, aiDrivers,
+    maxLaps, cfg,
+    startTime:null, elapsed:0,
+    phase:'countdown', countdownN:3,
+    finished:false, paused:false,
+    animId:null,
+    input:{left:0,right:0,gas:0,brake:0},
+    keys:{},
+    lapFlashTimeout:null,
+  };
+  raceState=state;
+
+  setupInput(state);
+  showHUD(true);
+  runCountdown(state);
+}
+
+function runCountdown(state){
+  const el=document.getElementById('countdown');
+  const num=document.getElementById('countdownNum');
+  el.classList.add('active');
+  let n=3;
+  num.textContent=n;
+  playTone(440,.3,'square',.15);
+  const iv=setInterval(()=>{
+    n--;
+    if(n>0){
+      num.textContent=n;
+      playTone(440,.3,'square',.15);
+    } else {
+      num.textContent='GO!';
+      num.style.color='#4ecdc4';
+      playTone(880,.5,'square',.2);
+      setTimeout(()=>{
+        el.classList.remove('active');
+        num.style.color='#ffd200';
+        state.phase='racing';
+        state.startTime=Date.now();
+        state.animId=requestAnimationFrame(()=>gameLoop(state));
+      },600);
+      clearInterval(iv);
+    }
+  },800);
+}
+
+function gameLoop(state){
+  if(state.paused||state.finished) return;
+  state.elapsed=(Date.now()-state.startTime)/1000;
+  update(state);
+  render(state);
+  updateHUD(state);
+  state.animId=requestAnimationFrame(()=>gameLoop(state));
+}
+
+function update(state){
+  const {pCar,allCars,aiDrivers,track,input,maxLaps,particles}=state;
+
+  // Player input
+  pCar.throttle = Math.max(input.gas, state.keys['arrowup']||state.keys['w']?1:0);
+  pCar.brakeF   = Math.max(input.brake, state.keys['arrowdown']||state.keys['s']?1:0);
+  pCar.steer    = (state.keys['arrowright']||state.keys['d']?1:0) - (state.keys['arrowleft']||state.keys['a']?1:0);
+  if(input.left)  pCar.steer = -1;
+  if(input.right) pCar.steer =  1;
+
+  // Update all cars
+  for(const car of allCars) car.update(track);
+
+  // AI
+  for(const ai of aiDrivers) ai.update(allCars);
+
+  // Car-car collisions (simple circle)
+  for(let i=0;i<allCars.length;i++){
+    for(let j=i+1;j<allCars.length;j++){
+      const a=allCars[i], b=allCars[j];
+      const d=a.pos.dist(b.pos);
+      const minD=36;
+      if(d<minD){
+        const n=b.pos.sub(a.pos).norm();
+        const rv=b.vel.sub(a.vel);
+        const imp=rv.dot(n)*-.45;
+        a.vel=a.vel.sub(n.scale(imp));
+        b.vel=b.vel.add(n.scale(imp));
+        const sep=n.scale((minD-d)/2+.5);
+        a.pos=a.pos.sub(sep);
+        b.pos=b.pos.add(sep);
+        particles.spawn(a.pos.x,a.pos.y,'#ffaa00',5);
+      }
+    }
+  }
+
+  // Checkpoints & laps
+  for(const car of allCars){
+    const lapDone = car.checkCheckpoints(track, state.elapsed);
+    if(lapDone && !car.finished){
+      if(car===pCar){
+        if(car.lap-1 < maxLaps){
+          // Show lap flash
+          showLapFlash(`סיבוב ${car.lap-1} ✓`);
+          playLap();
+        } else {
+          car.finished=true; car.finishTime=state.elapsed;
+          playWin();
+          setTimeout(()=>showGameOver(state), 800);
+        }
+      } else {
+        if(car.lap-1 >= maxLaps && !car.finished){
+          car.finished=true; car.finishTime=state.elapsed;
+        }
+      }
+    }
+  }
+
+  particles.update();
+}
+
+function render(state){
+  const {ctx,canvas,track,allCars,pCar,particles}=state;
+  const W=canvas.width, H=canvas.height;
+
+  // Camera follows player
+  const camX = W/2 - pCar.pos.x;
+  const camY = H/2 - pCar.pos.y;
+
+  // Clear with grass
+  const grassGrad=ctx.createLinearGradient(0,0,W,H);
+  grassGrad.addColorStop(0,'#2d5a27');
+  grassGrad.addColorStop(.5,'#3a7a32');
+  grassGrad.addColorStop(1,'#2d5a27');
+  ctx.fillStyle=grassGrad;
+  ctx.fillRect(0,0,W,H);
+
+  // Grass texture dots
+  ctx.save();
+  ctx.globalAlpha=.08;
+  ctx.fillStyle='#1a4018';
+  for(let gx=0;gx<W;gx+=18){
+    for(let gy=0;gy<H;gy+=18){
+      if((gx+gy)%36===0){ ctx.beginPath(); ctx.arc(gx,gy,4,0,Math.PI*2); ctx.fill(); }
+    }
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(camX,camY);
+
+  track.render(ctx);
+  particles.render(ctx);
+
+  // Draw cars sorted by y (simple depth)
+  const sorted=[...allCars].sort((a,b)=>a.pos.y-b.pos.y);
+  for(const car of sorted) car.render(ctx);
+
+  ctx.restore();
+
+  // Minimap
+  renderMinimap(state);
+  renderSpeedArc(state);
+}
+
+function renderMinimap(state){
+  const mc=document.getElementById('minimapC');
+  const mctx=mc.getContext('2d');
+  const W=mc.width, H=mc.height;
+  const scale=.095;
+  const {track,allCars,pCar}=state;
+
+  mctx.fillStyle='rgba(0,0,0,.75)';
+  mctx.fillRect(0,0,W,H);
+
+  const ox=W/2-pCar.pos.x*scale, oy=H/2-pCar.pos.y*scale;
+
+  // Track
+  mctx.strokeStyle='rgba(80,80,80,.9)';
+  mctx.lineWidth=8*scale*11;
+  mctx.beginPath();
+  track.pts.forEach((p,i)=>{
+    const x=p.x*scale+ox, y=p.y*scale+oy;
+    i===0?mctx.moveTo(x,y):mctx.lineTo(x,y);
+  });
+  mctx.closePath();
+  mctx.stroke();
+
+  mctx.strokeStyle='#555';
+  mctx.lineWidth=1;
+  mctx.stroke();
+
+  // Cars
+  for(const car of allCars){
+    const x=car.pos.x*scale+ox, y=car.pos.y*scale+oy;
+    mctx.fillStyle=car===pCar?'#ffd200':car.def.color;
+    mctx.beginPath();
+    mctx.arc(x,y, car===pCar?4:3, 0,Math.PI*2);
+    mctx.fill();
+    if(car===pCar){mctx.strokeStyle='#fff';mctx.lineWidth=1;mctx.stroke();}
+  }
+}
+
+function renderSpeedArc(state){
+  const c=document.getElementById('speedArcC');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+
+  const spd=Math.min(state.pCar.vel.len()*10, 200);
+  const maxSpd=200;
+  const pct=spd/maxSpd;
+
+  const cx=W/2,cy=H-8,r=44;
+  const startA=Math.PI, endA=Math.PI*2;
+
+  // BG arc
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,startA,endA);
+  ctx.strokeStyle='rgba(255,255,255,.12)';
+  ctx.lineWidth=8; ctx.lineCap='round'; ctx.stroke();
+
+  // Fill arc
+  const fillEnd=startA+pct*Math.PI;
+  const arcGrad=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
+  arcGrad.addColorStop(0,'#4ecdc4');
+  arcGrad.addColorStop(.5,'#ffd200');
+  arcGrad.addColorStop(1,'#ff4444');
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,startA,fillEnd);
+  ctx.strokeStyle=arcGrad;
+  ctx.lineWidth=8; ctx.stroke();
+
+  // Needle
+  const nA=startA+pct*Math.PI;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(nA)*38, cy+Math.sin(nA)*38);
+  ctx.strokeStyle='#fff';
+  ctx.lineWidth=2; ctx.stroke();
+
+  // Speed text
+  ctx.fillStyle='#fff';
+  ctx.font='bold 16px Arial';
+  ctx.textAlign='center';
+  ctx.fillText(Math.floor(spd),cx,cy-4);
+}
+
+function updateHUD(state){
+  const {pCar,allCars,track,elapsed,maxLaps}=state;
+  const spd=Math.floor(pCar.vel.len()*10);
+  document.getElementById('hudSpeed').textContent=spd;
+
+  // Position
+  const pos = calcPositions(allCars,track);
+  const myPos = pos.find(p=>p.car===pCar);
+  document.getElementById('hudPos').textContent = myPos ? myPos.rank+'/'+allCars.length : '?';
+
+  const m=Math.floor(elapsed/60);
+  const s=Math.floor(elapsed%60);
+  document.getElementById('hudTime').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+
+  const curLap=Math.min(pCar.lap, maxLaps);
+  document.getElementById('hudLap').textContent=curLap;
+  document.getElementById('hudMaxLap').textContent=maxLaps;
+}
+
+function calcPositions(cars,track){
+  return cars.map(car=>({
+    car,
+    score: car.lap*10000 + track.closest(car.pos)
+  })).sort((a,b)=>b.score-a.score)
+    .map((item,i)=>({car:item.car, rank:i+1}));
+}
+
+function showHUD(on){
+  ['hud','lapBar','pauseBtn','minimapWrap','speedArc','controls'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) on?el.classList.add('active'):el.classList.remove('active');
+  });
+}
+
+function showLapFlash(text){
+  const fl=document.getElementById('lapFlash');
+  const txt=document.getElementById('lapFlashText');
+  txt.textContent=text;
+  fl.classList.add('active');
+  clearTimeout(raceState.lapFlashTimeout);
+  raceState.lapFlashTimeout=setTimeout(()=>fl.classList.remove('active'),1600);
+}
+
+function showGameOver(state){
+  cancelAnimationFrame(state.animId);
+  state.finished=true;
+  showHUD(false);
+  App.showScreen('gameoverScreen');
+
+  const pos=calcPositions(state.allCars,state.track);
+  const myRank=pos.find(p=>p.car===state.pCar)?.rank||'-';
+  const total=state.allCars.length;
+  const won=myRank===1;
+
+  document.getElementById('goIcon').textContent=won?'🏆':'🏁';
+  document.getElementById('goTitle').textContent=won?'ניצחת!':'סיום המירוץ';
+  const m=Math.floor(state.elapsed/60);
+  const s=Math.floor(state.elapsed%60);
+  document.getElementById('goStats').innerHTML=`
+    <p>עמדה סופית: <span>${myRank}/${total}</span></p>
+    <p>זמן: <span>${m}:${s.toString().padStart(2,'0')}</span></p>
+    <p>מהירות מקסימלית: <span>${Math.floor(state.pCar.def.maxSpd*10)} קמ"ש</span></p>
+    <p>סיבובים: <span>${state.maxLaps}</span></p>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════
+//  INPUT  (keyboard + touch)
+// ════════════════════════════════════════════════════════════
+function setupInput(state){
+  // Keyboard
+  window.onkeydown=e=>{state.keys[e.key.toLowerCase()]=true;};
+  window.onkeyup=e=>{state.keys[e.key.toLowerCase()]=false;};
+
+  // Touch buttons
+  const map={
+    btnLeft:  ()=>{state.input.left=1;},
+    btnRight: ()=>{state.input.right=1;},
+    btnGas:   ()=>{state.input.gas=1;},
+    btnBrake: ()=>{state.input.brake=1;},
+  };
+  const unmap={
+    btnLeft:  ()=>{state.input.left=0;},
+    btnRight: ()=>{state.input.right=0;},
+    btnGas:   ()=>{state.input.gas=0;},
+    btnBrake: ()=>{state.input.brake=0;},
+  };
+  for(const id in map){
+    const el=document.getElementById(id);
+    if(!el)continue;
+    el.addEventListener('touchstart',e=>{e.preventDefault();map[id]();el.classList.add('pressed');},{passive:false});
+    el.addEventListener('touchend',e=>{e.preventDefault();unmap[id]();el.classList.remove('pressed');},{passive:false});
+    el.addEventListener('mousedown',()=>{map[id]();el.classList.add('pressed');});
+    el.addEventListener('mouseup',()=>{unmap[id]();el.classList.remove('pressed');});
+    el.addEventListener('mouseleave',()=>{unmap[id]();el.classList.remove('pressed');});
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  APP CONTROLLER
+// ════════════════════════════════════════════════════════════
+let selectedCar=0;
+
+const App = {
+  showScreen(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+  },
+
+  startRace(){
+    const cfg={
+      carIdx: selectedCar,
+      diff: document.getElementById('cfgDiff').value,
+      opponents: parseInt(document.getElementById('cfgOpponents').value)||2,
+      laps: parseInt(document.getElementById('cfgLaps').value)||3,
+    };
+    this.showScreen('__none__'); // hide all menus
+    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+    startRace(cfg);
+  },
+
+  pauseGame(){
+    if(!raceState||raceState.finished) return;
+    raceState.paused=true;
+    cancelAnimationFrame(raceState.animId);
+    this.showScreen('pauseScreen');
+  },
+
+  resumeGame(){
+    if(!raceState) return;
+    raceState.paused=false;
+    this.showScreen('__none__');
+    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+    raceState.startTime = Date.now() - raceState.elapsed*1000;
+    raceState.animId=requestAnimationFrame(()=>gameLoop(raceState));
+  },
+
+  quitToMenu(){
+    if(raceState) cancelAnimationFrame(raceState.animId);
+    raceState=null;
+    window.onkeydown=null; window.onkeyup=null;
+    showHUD(false);
+    this.showScreen('menuScreen');
+  },
+
+  showLeaderboard(){
+    const lb=JSON.parse(localStorage.getItem('mirelRacingLB')||'[]');
+    const list=document.getElementById('lbList');
+    if(!lb.length){
+      list.innerHTML='<p style="color:#888;text-align:center;padding:20px">אין ניקודים עדיין</p>';
+    } else {
+      list.innerHTML=lb.map((e,i)=>`
+        <div class="lb-row">
+          <div class="lb-rank">${i+1}</div>
+          <div class="lb-name">${e.name}</div>
+          <div class="lb-time">${e.time}</div>
+          <div class="lb-pos">מקום ${e.pos}</div>
+        </div>`).join('');
+    }
+    this.showScreen('lbScreen');
+  },
+
+  saveScore(){
+    if(!raceState) return;
+    const name=document.getElementById('playerNameInput').value.trim()||'שחקן';
+    const pos=calcPositions(raceState.allCars,raceState.track);
+    const rank=pos.find(p=>p.car===raceState.pCar)?.rank||'-';
+    const m=Math.floor(raceState.elapsed/60), s=Math.floor(raceState.elapsed%60);
+    const timeStr=`${m}:${s.toString().padStart(2,'0')}`;
+    const lb=JSON.parse(localStorage.getItem('mirelRacingLB')||'[]');
+    lb.push({name,pos:rank,time:timeStr,date:new Date().toLocaleDateString('he-IL')});
+    lb.sort((a,b)=>a.pos-b.pos||(a.time<b.time?-1:1));
+    lb.splice(15);
+    localStorage.setItem('mirelRacingLB',JSON.stringify(lb));
+    this.quitToMenu();
+  },
+
+  clearLB(){
+    if(confirm('לנקות את כל הניקודים?')){
+      localStorage.removeItem('mirelRacingLB');
+      this.showLeaderboard();
+    }
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+//  CAR SELECT UI
+// ════════════════════════════════════════════════════════════
+function buildCarSelect(){
+  const row=document.getElementById('carSelectRow');
+  CAR_DEFS.forEach((def,i)=>{
+    const card=document.createElement('div');
+    card.className='car-card'+(i===0?' selected':'');
+    card.innerHTML=`<span class="car-emoji" style="color:${def.color}">🚗</span><div class="car-name">${def.name}</div><div class="car-spd">מהירות ${def.maxSpd}</div>`;
+    card.onclick=()=>{
+      selectedCar=i;
+      row.querySelectorAll('.car-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      playTone(660,.1,'triangle',.1);
+    };
+    row.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+//  RESIZE
+// ════════════════════════════════════════════════════════════
+window.addEventListener('resize',()=>{
+  const canvas=document.getElementById('gameCanvas');
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+});
+
+// Prevent scroll / zoom on mobile
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+
+// ════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════
+buildCarSelect();
+const canvas=document.getElementById('gameCanvas');
+canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+</script>
 </body>
 </html>
