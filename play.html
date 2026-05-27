@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirel Racing - משחק מכוניות</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            direction: rtl;
+            overflow: hidden;
+        }
+
+        .menu-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .menu-container.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .menu-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .menu-content h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .menu-content h2 {
+            font-size: 32px;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            font-size: 16px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .game-container {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        .game-container.active {
+            display: flex;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+            width: 100%;
+            height: 100%;
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .hud-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .hud-item span:first-child {
+            color: #ffb347;
+        }
+
+        .pause-btn {
+            padding: 10px 20px;
+            background: rgba(255, 107, 107, 0.8);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            pointer-events: all;
+        }
+
+        .pause-btn:hover {
+            background: rgba(255, 107, 107, 1);
+        }
+
+        @media (max-width: 768px) {
+            .menu-content {
+                padding: 30px 20px;
+            }
+
+            .menu-content h1 {
+                font-size: 36px;
+            }
+
+            .hud-top {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="mainMenu" class="menu-container active">
+        <div class="menu-content">
+            <h1>🏎️ Mirel Racing</h1>
+            <p class="subtitle">משחק מכוניות ברימה גבוהה</p>
+            <button onclick="startGame()" class="btn btn-primary">התחל משחק</button>
+            <button onclick="showInstructions()" class="btn btn-secondary">הוראות</button>
+        </div>
+    </div>
+
+    <div id="instructionsMenu" class="menu-container">
+        <div class="menu-content">
+            <h2>הוראות</h2>
+            <div style="text-align: right; font-size: 14px; line-height: 1.8;">
+                <p><strong>בקרות:</strong></p>
+                <p>W / חץ למעלה - אצבע</p>
+                <p>S / חץ למטה - בלימה</p>
+                <p>A / חץ שמאל - פניה שמאל</p>
+                <p>D / חץ ימין - פניה ימין</p>
+                <p>P - השהה</p>
+            </div>
+            <button onclick="backToMenu()" class="btn btn-primary">חזור</button>
+        </div>
+    </div>
+
+    <div id="gameContainer" class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="hud" class="hud">
+            <div class="hud-top">
+                <div class="hud-item">
+                    <span>מהירות:</span>
+                    <span id="speedDisplay">0</span> km/h
+                </div>
+                <div class="hud-item">
+                    <span>עמדה:</span>
+                    <span id="positionDisplay">1</span>
+                </div>
+                <div class="hud-item">
+                    <span>זמן:</span>
+                    <span id="timeDisplay">0:00</span>
+                </div>
+            </div>
+            <button id="pauseBtn" onclick="togglePause()" class="pause-btn">⏸ השהה</button>
+        </div>
+    </div>
+
+    <div id="pauseMenu" class="menu-container">
+        <div class="menu-content">
+            <h2>משחק מושהה</h2>
+            <button onclick="togglePause()" class="btn btn-primary">המשך</button>
+            <button onclick="backToMenu()" class="btn btn-secondary">חזור לתפריט</button>
+        </div>
+    </div>
+
+    <script>
+        // Vector2 class
+        class Vector2 {
+            constructor(x = 0, y = 0) {
+                this.x = x;
+                this.y = y;
+            }
+            add(v) { return new Vector2(this.x + v.x, this.y + v.y); }
+            subtract(v) { return new Vector2(this.x - v.x, this.y - v.y); }
+            multiply(scalar) { return new Vector2(this.x * scalar, this.y * scalar); }
+            magnitude() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+            normalize() {
+                const mag = this.magnitude();
+                if (mag === 0) return new Vector2(0, 0);
+                return new Vector2(this.x / mag, this.y / mag);
+            }
+            distance(v) { return this.subtract(v).magnitude(); }
+            dot(v) { return this.x * v.x + this.y * v.y; }
+            rotate(angle) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                return new Vector2(this.x * cos - this.y * sin, this.x * sin + this.y * cos);
+            }
+        }
+
+        // Car class
+        class Car {
+            constructor(x, y, color = '#ff6b6b') {
+                this.position = new Vector2(x, y);
+                this.velocity = new Vector2(0, 0);
+                this.angle = 0;
+                this.width = 30;
+                this.height = 50;
+                this.maxSpeed = 15;
+                this.acceleration_rate = 0.3;
+                this.brake_rate = 0.25;
+                this.friction = 0.98;
+                this.turning_speed = 0.15;
+                this.color = color;
+                this.throttle = 0;
+                this.brake = 0;
+                this.steering = 0;
+                this.lapTime = 0;
+                this.totalDistance = 0;
+            }
+
+            update() {
+                this.angle += this.steering * this.turning_speed;
+                const forwardDir = new Vector2(Math.sin(this.angle), -Math.cos(this.angle));
+                let engineForce = 0;
+                if (this.throttle > 0) engineForce = this.acceleration_rate * this.throttle;
+                if (this.brake > 0) engineForce = -this.brake_rate * this.brake;
+                const speed = this.velocity.magnitude();
+                let targetSpeed = speed + engineForce;
+                targetSpeed = Math.max(-this.maxSpeed / 2, Math.min(this.maxSpeed, targetSpeed));
+                this.velocity = this.velocity.multiply(this.friction);
+                this.velocity = forwardDir.multiply(targetSpeed);
+                this.position = this.position.add(this.velocity);
+                this.totalDistance += this.velocity.magnitude();
+                this.lapTime++;
+            }
+
+            render(ctx) {
+                ctx.save();
+                ctx.translate(this.position.x, this.position.y);
+                ctx.rotate(this.angle);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                ctx.fillStyle = 'rgba(100, 150, 255, 0.6)';
+                ctx.fillRect(-this.width / 2 + 4, -this.height / 2 + 8, this.width - 8, 10);
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(-this.width / 2 + 5, -this.height / 2 - 3, this.width - 10, 3);
+                ctx.restore();
+            }
+        }
+
+        // Track class
+        class Track {
+            constructor() {
+                this.waypoints = [];
+                this.width = 100;
+                this.generateTrack();
+            }
+
+            generateTrack() {
+                const points = 200;
+                for (let i = 0; i < points; i++) {
+                    const t = (i / points) * Math.PI * 2;
+                    let x, y;
+                    if (t < Math.PI) {
+                        x = 400 + 200 * Math.cos(t);
+                        y = 300 + 150 * Math.sin(t);
+                    } else {
+                        x = 800 + 200 * Math.cos(t);
+                        y = 300 + 150 * Math.sin(t);
+                    }
+                    this.waypoints.push(new Vector2(x, y));
+                }
+            }
+
+            render(ctx) {
+                ctx.strokeStyle = 'rgba(100, 100, 100, 0.8)';
+                ctx.lineWidth = this.width;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(this.waypoints[0].x, this.waypoints[0].y);
+                for (let i = 1; i < this.waypoints.length; i++) {
+                    ctx.lineTo(this.waypoints[i].x, this.waypoints[i].y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                const start = this.waypoints[0];
+                ctx.arc(start.x, start.y, 60, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            getClosestWaypoint(position) {
+                let closest = 0;
+                let minDist = Infinity;
+                for (let i = 0; i < this.waypoints.length; i++) {
+                    const dist = position.distance(this.waypoints[i]);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = i;
+                    }
+                }
+                return closest;
+            }
+        }
+
+        // Game class
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.track = new Track();
+                this.playerCar = null;
+                this.paused = false;
+                this.startTime = 0;
+                this.elapsedTime = 0;
+                this.keys = {};
+                this.setupKeyListeners();
+                this.gameLoop();
+            }
+
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            setupKeyListeners() {
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                    this.updatePlayerInput();
+                });
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                    this.updatePlayerInput();
+                });
+            }
+
+            updatePlayerInput() {
+                if (!this.playerCar) return;
+                if (this.keys['w'] || this.keys['arrowup']) {
+                    this.playerCar.throttle = 1;
+                    this.playerCar.brake = 0;
+                } else if (this.keys['s'] || this.keys['arrowdown']) {
+                    this.playerCar.brake = 1;
+                    this.playerCar.throttle = 0;
+                } else {
+                    this.playerCar.throttle = 0;
+                    this.playerCar.brake = 0;
+                }
+                if (this.keys['a'] || this.keys['arrowleft']) {
+                    this.playerCar.steering = -1;
+                } else if (this.keys['d'] || this.keys['arrowright']) {
+                    this.playerCar.steering = 1;
+                } else {
+                    this.playerCar.steering = 0;
+                }
+            }
+
+            startNewGame() {
+                this.playerCar = new Car(400, 400, '#ff6b6b');
+                this.paused = false;
+                this.startTime = Date.now();
+                this.elapsedTime = 0;
+                document.getElementById('mainMenu').classList.remove('active');
+                document.getElementById('instructionsMenu').classList.remove('active');
+                document.getElementById('gameContainer').classList.add('active');
+            }
+
+            update() {
+                if (!this.playerCar || this.paused) return;
+                this.playerCar.update();
+                this.elapsedTime = (Date.now() - this.startTime) / 1000;
+                this.updateHUD();
+            }
+
+            render() {
+                this.ctx.fillStyle = 'rgba(135, 206, 235, 0.1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.save();
+                const cameraX = this.canvas.width / 2 - this.playerCar.position.x;
+                const cameraY = this.canvas.height / 2 - this.playerCar.position.y;
+                this.ctx.translate(cameraX, cameraY);
+                this.track.render(this.ctx);
+                this.playerCar.render(this.ctx);
+                this.ctx.restore();
+            }
+
+            updateHUD() {
+                const speed = Math.floor(this.playerCar.velocity.magnitude() * 10);
+                document.getElementById('speedDisplay').textContent = speed;
+                const minutes = Math.floor(this.elapsedTime / 60);
+                const seconds = Math.floor(this.elapsedTime % 60);
+                document.getElementById('timeDisplay').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            gameLoop() {
+                this.update();
+                if (document.getElementById('gameContainer').classList.contains('active')) {
+                    this.render();
+                }
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        let game;
+
+        function startGame() {
+            if (!game) game = new Game();
+            game.startNewGame();
+        }
+
+        function showInstructions() {
+            document.getElementById('mainMenu').classList.remove('active');
+            document.getElementById('instructionsMenu').classList.add('active');
+        }
+
+        function togglePause() {
+            if (!game || !document.getElementById('gameContainer').classList.contains('active')) return;
+            game.paused = !game.paused;
+            const pauseMenu = document.getElementById('pauseMenu');
+            game.paused ? pauseMenu.classList.add('active') : pauseMenu.classList.remove('active');
+        }
+
+        function backToMenu() {
+            document.getElementById('mainMenu').classList.add('active');
+            document.getElementById('instructionsMenu').classList.remove('active');
+            document.getElementById('pauseMenu').classList.remove('active');
+            document.getElementById('gameContainer').classList.remove('active');
+            if (game) game.paused = false;
+        }
+
+        // Initialize game on load
+        window.addEventListener('load', () => {
+            game = new Game();
+        });
+    </script>
+</body>
+</html>
