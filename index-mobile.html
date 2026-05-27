@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏎️ Mirel Racing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; touch-action: none; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            direction: rtl;
+        }
+        .menu {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000;
+            opacity: 1; pointer-events: all;
+            transition: opacity 0.3s;
+        }
+        .menu.hidden { opacity: 0; pointer-events: none; }
+        .menu-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 90vw;
+        }
+        .menu h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .menu h2 { font-size: 1.8em; margin-bottom: 20px; }
+        .menu p { margin-bottom: 20px; font-size: 1.1em; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            background: #ff6b6b;
+            color: white;
+            transition: all 0.3s;
+        }
+        .btn:active { transform: scale(0.95); background: #ff5252; }
+        #gameContainer { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .hud {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 100;
+        }
+        .hud-item { display: inline-block; margin-right: 20px; }
+        .pause-btn {
+            position: absolute;
+            bottom: 20px; left: 20px;
+            padding: 10px 15px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 100;
+            font-weight: bold;
+        }
+        #touchLeft, #touchRight {
+            position: fixed;
+            bottom: 20px;
+            width: 80px; height: 80px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center; justify-content: center;
+            font-size: 2em;
+            z-index: 100;
+            touch-action: none;
+        }
+        #touchLeft { left: 20px; }
+        #touchRight { right: 20px; }
+    </style>
+</head>
+<body>
+    <div id="mainMenu" class="menu">
+        <div class="menu-content">
+            <h1>🏎️ Mirel Racing</h1>
+            <p>משחק מכוניות בריימה גבוהה</p>
+            <button class="btn" onclick="startGame()">התחל משחק</button>
+            <button class="btn" onclick="showInstructions()">הוראות</button>
+        </div>
+    </div>
+
+    <div id="instructionsMenu" class="menu hidden">
+        <div class="menu-content">
+            <h2>הוראות</h2>
+            <p style="text-align: right; font-size: 0.9em; line-height: 1.8;">
+                <strong>מחשב:</strong><br>
+                W - אצבע<br>
+                S - בלימה<br>
+                A/D - סטייה<br>
+                P - השהה<br><br>
+                <strong>פלאפון:</strong><br>
+                עיגול שמאל - סטייה<br>
+                עיגול ימין - אצבע/בלימה
+            </p>
+            <button class="btn" onclick="startGame()">התחל משחק</button>
+            <button class="btn" onclick="hideInstructions()">חזור</button>
+        </div>
+    </div>
+
+    <div id="pauseMenu" class="menu hidden">
+        <div class="menu-content">
+            <h2>משחק מושהה</h2>
+            <button class="btn" onclick="togglePause()">המשך</button>
+            <button class="btn" onclick="goToMenu()">חזור לתפריט</button>
+        </div>
+    </div>
+
+    <div id="gameContainer" style="display:none;">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <span class="hud-item">מהירות: <span id="speed">0</span> km/h</span>
+            <span class="hud-item">זמן: <span id="time">0:00</span></span>
+        </div>
+        <button class="pause-btn" onclick="togglePause()">⏸ השהה</button>
+        <div id="touchLeft">⬅️</div>
+        <div id="touchRight">⬆️</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        class Vector2 {
+            constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+            add(v) { return new Vector2(this.x + v.x, this.y + v.y); }
+            multiply(s) { return new Vector2(this.x * s, this.y * s); }
+            magnitude() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+            normalize() {
+                const mag = this.magnitude();
+                return mag === 0 ? new Vector2(0, 0) : new Vector2(this.x / mag, this.y / mag);
+            }
+        }
+
+        class Car {
+            constructor(x, y, color = '#ff6b6b') {
+                this.pos = new Vector2(x, y);
+                this.vel = new Vector2(0, 0);
+                this.angle = 0;
+                this.w = 25; this.h = 45;
+                this.maxSpeed = 12;
+                this.accel = 0.2;
+                this.friction = 0.97;
+                this.color = color;
+                this.throttle = 0;
+                this.brake = 0;
+                this.steering = 0;
+            }
+
+            update() {
+                this.angle += this.steering * 0.12;
+                const dir = new Vector2(Math.sin(this.angle), -Math.cos(this.angle));
+                
+                let force = 0;
+                if (this.throttle) force = this.accel;
+                if (this.brake) force = -0.15;
+                
+                const speed = this.vel.magnitude() + force;
+                this.vel = dir.multiply(Math.max(-6, Math.min(this.maxSpeed, speed)));
+                this.vel = this.vel.multiply(this.friction);
+                this.pos = this.pos.add(this.vel);
+                
+                // Wrap around
+                if (this.pos.x < -50) this.pos.x = canvas.width + 50;
+                if (this.pos.x > canvas.width + 50) this.pos.x = -50;
+                if (this.pos.y < -50) this.pos.y = canvas.height + 50;
+                if (this.pos.y > canvas.height + 50) this.pos.y = -50;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.pos.x, this.pos.y);
+                ctx.rotate(this.angle);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.w / 2, -this.h / 2, this.w, this.h);
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(-this.w / 2 + 2, -this.h / 2 - 2, this.w - 4, 3);
+                ctx.restore();
+            }
+        }
+
+        const player = new Car(canvas.width / 2, canvas.height / 2);
+        const enemies = [
+            new Car(100, 100, '#4ecdc4'),
+            new Car(canvas.width - 100, 100, '#45b7d1'),
+            new Car(canvas.width / 2, canvas.height - 100, '#96ceb4')
+        ];
+
+        const keys = {};
+        let gameRunning = false;
+        let paused = false;
+        let startTime = 0;
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            updateInput();
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+            updateInput();
+        });
+
+        function updateInput() {
+            player.throttle = keys['w'] || keys['arrowup'] ? 1 : 0;
+            player.brake = keys['s'] || keys['arrowdown'] ? 1 : 0;
+            player.steering = 0;
+            if (keys['a'] || keys['arrowleft']) player.steering = -1;
+            if (keys['d'] || keys['arrowright']) player.steering = 1;
+        }
+
+        // Touch controls
+        const touchLeft = document.getElementById('touchLeft');
+        const touchRight = document.getElementById('touchRight');
+
+        touchLeft.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const rect = touchLeft.getBoundingClientRect();
+            const center = rect.left + rect.width / 2;
+            const offset = (touch.clientX - center) / (rect.width / 2);
+            player.steering = Math.max(-1, Math.min(1, offset));
+        });
+        touchLeft.addEventListener('touchend', () => { player.steering = 0; });
+
+        touchRight.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const rect = touchRight.getBoundingClientRect();
+            const centerY = rect.top + rect.height / 2;
+            const offset = touch.clientY - centerY;
+            if (offset < -20) {
+                player.throttle = 1;
+                player.brake = 0;
+            } else if (offset > 20) {
+                player.brake = 1;
+                player.throttle = 0;
+            } else {
+                player.throttle = 0;
+                player.brake = 0;
+            }
+        });
+        touchRight.addEventListener('touchend', () => {
+            player.throttle = 0;
+            player.brake = 0;
+        });
+
+        function update() {
+            if (!gameRunning || paused) return;
+            
+            player.update();
+            enemies.forEach(enemy => {
+                enemy.throttle = 0.7;
+                enemy.steering = Math.sin(Date.now() / 1000 + enemy.pos.x) * 0.5;
+                enemy.update();
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = 'linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw track
+            ctx.strokeStyle = 'rgba(100,100,100,0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+            }
+            ctx.stroke();
+            
+            player.draw();
+            enemies.forEach(e => e.draw());
+            
+            // Update HUD
+            const speed = Math.floor(player.vel.magnitude() * 10);
+            document.getElementById('speed').textContent = speed;
+            if (gameRunning) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const min = Math.floor(elapsed / 60);
+                const sec = Math.floor(elapsed % 60);
+                document.getElementById('time').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameRunning = true;
+            paused = false;
+            startTime = Date.now();
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('instructionsMenu').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('gameContainer').style.display = 'block';
+        }
+
+        function showInstructions() {
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('instructionsMenu').classList.remove('hidden');
+        }
+
+        function hideInstructions() {
+            document.getElementById('instructionsMenu').classList.add('hidden');
+            document.getElementById('mainMenu').classList.remove('hidden');
+        }
+
+        function togglePause() {
+            if (!gameRunning) return;
+            paused = !paused;
+            document.getElementById('pauseMenu').classList.toggle('hidden');
+        }
+
+        function goToMenu() {
+            gameRunning = false;
+            paused = false;
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('mainMenu').classList.remove('hidden');
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
