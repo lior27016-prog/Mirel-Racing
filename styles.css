@@ -1,0 +1,286 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    direction: rtl;
+    overflow: hidden;
+}
+
+.menu-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.menu-container.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.menu-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+}
+
+.menu-content h1 {
+    font-size: 48px;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.menu-content h2 {
+    font-size: 32px;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.subtitle {
+    font-size: 16px;
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
+
+.btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.btn-primary {
+    background: #ff6b6b;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #ff5252;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid white;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.settings-group {
+    margin: 20px 0;
+    text-align: right;
+}
+
+.settings-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.settings-group select,
+.settings-group input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.game-container {
+    display: none;
+    width: 100%;
+    height: 100vh;
+    position: relative;
+}
+
+.game-container.active {
+    display: flex;
+}
+
+#gameCanvas {
+    display: block;
+    background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+    width: 100%;
+    height: 100%;
+}
+
+.hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.hud-top {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 15px 20px;
+    border-radius: 10px;
+    color: white;
+    font-weight: bold;
+}
+
+.hud-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.hud-item span:first-child {
+    color: #ffb347;
+}
+
+.hud-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.minimap-container {
+    width: 150px;
+    height: 150px;
+    border: 2px solid white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+#minimap {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.pause-btn {
+    padding: 10px 20px;
+    background: rgba(255, 107, 107, 0.8);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    pointer-events: all;
+}
+
+.pause-btn:hover {
+    background: rgba(255, 107, 107, 1);
+}
+
+.leaderboard-list {
+    text-align: right;
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.leaderboard-entry {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.leaderboard-entry .rank {
+    font-weight: bold;
+    color: #ffb347;
+    min-width: 30px;
+}
+
+.leaderboard-entry .name {
+    flex: 1;
+}
+
+.leaderboard-entry .score {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+.game-stats {
+    text-align: right;
+    margin: 20px 0;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.game-stats div {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+#playerName {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    margin: 20px 0;
+    text-align: right;
+}
+
+@media (max-width: 768px) {
+    .menu-content {
+        padding: 30px 20px;
+    }
+    
+    .menu-content h1 {
+        font-size: 36px;
+    }
+    
+    .hud-top {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .minimap-container {
+        width: 120px;
+        height: 120px;
+    }
+}

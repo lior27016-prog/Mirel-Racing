@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirel Racing - משחק מכוניות</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="mainMenu" class="menu-container active">
+        <div class="menu-content">
+            <h1>🏎️ Mirel Racing</h1>
+            <p class="subtitle">משחק מכוניות ברמה גבוהה</p>
+            <button onclick="startGame()" class="btn btn-primary">התחל משחק</button>
+            <button onclick="showSettings()" class="btn btn-secondary">הגדרות</button>
+            <button onclick="showLeaderboard()" class="btn btn-secondary">טבלת דירוג</button>
+        </div>
+    </div>
+
+    <div id="settingsMenu" class="menu-container">
+        <div class="menu-content">
+            <h2>הגדרות</h2>
+            <div class="settings-group">
+                <label>רמת קושי:</label>
+                <select id="difficultySelect" onchange="updateDifficulty()">
+                    <option value="easy">קל</option>
+                    <option value="medium" selected>בינוני</option>
+                    <option value="hard">קשה</option>
+                </select>
+            </div>
+            <div class="settings-group">
+                <label>מספר יריבים:</label>
+                <select id="opponentCount">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+            <div class="settings-group">
+                <label>
+                    <input type="checkbox" id="soundToggle" checked>
+                    הפעל צלילים
+                </label>
+            </div>
+            <button onclick="backToMenu()" class="btn btn-primary">חזור</button>
+        </div>
+    </div>
+
+    <div id="leaderboardMenu" class="menu-container">
+        <div class="menu-content">
+            <h2>טבלת דירוג</h2>
+            <div id="leaderboardList" class="leaderboard-list"></div>
+            <button onclick="clearLeaderboard()" class="btn btn-secondary">נקה טבלה</button>
+            <button onclick="backToMenu()" class="btn btn-primary">חזור</button>
+        </div>
+    </div>
+
+    <div id="gameContainer" class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="hud" class="hud">
+            <div class="hud-top">
+                <div class="hud-item">
+                    <span>מהירות:</span>
+                    <span id="speedDisplay">0</span> km/h
+                </div>
+                <div class="hud-item">
+                    <span>עמדה:</span>
+                    <span id="positionDisplay">1</span>
+                </div>
+                <div class="hud-item">
+                    <span>זמן:</span>
+                    <span id="timeDisplay">0:00</span>
+                </div>
+            </div>
+            <div class="hud-bottom">
+                <div class="minimap-container">
+                    <canvas id="minimap"></canvas>
+                </div>
+            </div>
+            <button id="pauseBtn" onclick="togglePause()" class="pause-btn">⏸ השהה</button>
+        </div>
+    </div>
+
+    <div id="pauseMenu" class="menu-container">
+        <div class="menu-content">
+            <h2>משחק מושהה</h2>
+            <button onclick="togglePause()" class="btn btn-primary">המשך</button>
+            <button onclick="backToMenu()" class="btn btn-secondary">חזור לתפריט</button>
+        </div>
+    </div>
+
+    <div id="gameOverMenu" class="menu-container">
+        <div class="menu-content">
+            <h2 id="gameOverTitle">סיום המשחק</h2>
+            <div id="gameStats" class="game-stats"></div>
+            <input type="text" id="playerName" placeholder="הכנס את שמך" maxlength="20">
+            <button onclick="saveScore()" class="btn btn-primary">שמור ניקוד</button>
+            <button onclick="backToMenu()" class="btn btn-secondary">חזור לתפריט</button>
+        </div>
+    </div>
+
+    <script src="physics.js"></script>
+    <script src="ai.js"></script>
+    <script src="game.js"></script>
+    <script src="input.js"></script>
+</body>
+</html>
